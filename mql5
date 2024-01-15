@@ -1,0 +1,118 @@
+mql5
+//+------------------------------------------------------------------+
+//|                                             FTMO Protector 8.mq5 |
+//|                                    Copyright 2022, Forex Robot Easy Team |
+//|                                           https://forexroboteasy.com |
+//+------------------------------------------------------------------+
+
+// Define constants
+#define TARGET_PROFIT 100.0     // Target profit in account currency
+#define TARGET_LOSS -50.0       // Target loss in account currency
+
+//+------------------------------------------------------------------+
+//| Expert initialization function                                   |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+   // Calculate midnight balance and real daily profit/loss
+   double midnightBalance = AccountBalance();
+   double dailyProfitLoss = 0.0;
+
+   // Print initial values
+   Print('Midnight Balance: ', midnightBalance);
+   Print('Real Daily Profit/Loss: ', dailyProfitLoss);
+
+   return INIT_SUCCEEDED;
+}
+
+//+------------------------------------------------------------------+
+//| Expert deinitialization function                                 |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+   // Close all open deals and orders
+   CloseAllDeals();
+}
+
+//+------------------------------------------------------------------+
+//| Expert tick function                                             |
+//+------------------------------------------------------------------+
+void OnTick()
+{
+   // Calculate real daily profit/loss
+   double dailyProfitLoss = AccountEquity() - AccountBalance() + AccountCredit();
+
+   // Print current values
+   Print('Midnight Balance: ', AccountBalance());
+   Print('Real Daily Profit/Loss: ', dailyProfitLoss);
+
+   // Check if target profit or loss is reached
+   if (dailyProfitLoss >= TARGET_PROFIT || dailyProfitLoss <= TARGET_LOSS)
+   {
+      // Close all Expert Advisors
+      CloseAllEAs();
+
+      // Close all open deals and orders
+      CloseAllDeals();
+
+      // Print final values
+      Print('Target profit/loss reached. Closing all EAs and open deals.');
+      Print('Final Midnight Balance: ', AccountBalance());
+      Print('Final Real Daily Profit/Loss: ', dailyProfitLoss);
+
+      // Stop the Expert Advisor
+      ExpertRemove();
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Close all Expert Advisors                                        |
+//+------------------------------------------------------------------+
+void CloseAllEAs()
+{
+   // Get the total number of Expert Advisors
+   int totalEAs = ExpertsTotal();
+
+   // Loop through all Expert Advisors
+   for (int i = 0; i < totalEAs; i++)
+   {
+      // Get the name of the Expert Advisor
+      string eaName = ExpertName(i);
+
+      // Close the Expert Advisor
+      ExpertRemove(eaName);
+   }
+}
+
+//+------------------------------------------------------------------+
+//| Close all open deals and orders                                   |
+//+------------------------------------------------------------------+
+void CloseAllDeals()
+{
+   // Get the total number of open deals
+   int totalDeals = OrdersTotal();
+
+   // Loop through all open deals
+   for (int i = totalDeals - 1; i >= 0; i--)
+   {
+      // Select the i-th deal
+      bool selectResult = OrderSelect(i, SELECT_BY_POS);
+
+      // Check if the deal is selected
+      if (selectResult)
+      {
+         // Close the deal
+         bool closeResult = OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), slippage, clrRed);
+
+         // Check if the deal is closed successfully
+         if (closeResult)
+         {
+            Print('Closed deal: ', OrderTicket());
+         }
+         else
+         {
+            Print('Failed to close deal: ', OrderTicket());
+         }
+      }
+   }
+}
